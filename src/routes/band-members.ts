@@ -22,20 +22,27 @@ interface BandMemberInput {
 // Transform the input data to match the database schema
 const transformBandMember = (input: BandMemberInput): Omit<BandMember, 'id'> => {
   return {
-    ...input,
-    social_links: input.social_links ? JSON.stringify(input.social_links) : null
+    name: input.name,
+    role: input.role,
+    bio: input.bio,
+    image_url: input.image_url,
+    social_links: input.social_links ? JSON.stringify(input.social_links) : null,
+    display_order: input.display_order
   };
 };
 
 // Transform partial input data for updates
 const transformPartialBandMember = (input: Partial<BandMemberInput>): Partial<BandMember> => {
-  if (!input.social_links) {
-    return input;
+  const transformed: Partial<BandMember> = { ...input };
+  
+  if (input.social_links !== undefined) {
+    transformed.social_links = input.social_links ? JSON.stringify(input.social_links) : null;
   }
-  return {
-    ...input,
-    social_links: JSON.stringify(input.social_links)
-  };
+
+  // Remove the original social_links object to avoid type conflicts
+  delete (transformed as any).social_links;
+  
+  return transformed;
 };
 
 // Get all band members
