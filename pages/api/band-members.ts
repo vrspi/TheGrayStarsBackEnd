@@ -1,6 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import mysql from 'mysql2/promise';
-import cors from 'cors';
+import { corsMiddleware } from '../../utils/cors';
 
 // Database configuration
 const pool = mysql.createPool({
@@ -17,24 +17,6 @@ const pool = mysql.createPool({
   queueLimit: 0
 });
 
-// CORS middleware
-const corsMiddleware = cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-});
-
-const runMiddleware = (req: VercelRequest, res: VercelResponse, fn: Function) => {
-  return new Promise((resolve, reject) => {
-    fn(req, res, (result: any) => {
-      if (result instanceof Error) {
-        return reject(result);
-      }
-      return resolve(result);
-    });
-  });
-};
-
 interface BandMember {
   id?: number;
   name: string;
@@ -48,13 +30,8 @@ interface BandMember {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   console.log('Band Members API Handler started');
   
-  // Run the CORS middleware
-  try {
-    await runMiddleware(req, res, corsMiddleware);
-  } catch (error) {
-    console.error('CORS middleware error:', error);
-    return res.status(500).json({ error: 'CORS configuration error' });
-  }
+  // Enable CORS
+  await corsMiddleware(req, res);
 
   // Test database connection
   try {
