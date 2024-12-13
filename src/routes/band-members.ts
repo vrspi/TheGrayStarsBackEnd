@@ -10,49 +10,55 @@ interface SocialLinks {
   youtube?: string;
 }
 
-interface BandMemberInput {
-  name: string;
-  role: string;
-  bio?: string;
-  image_url?: string;
+// Input types for API requests
+interface BandMemberInput extends Omit<BandMember, 'id' | 'social_links'> {
   social_links?: SocialLinks;
-  display_order: number;
 }
 
-// Transform the input data to match the database schema
-const transformBandMember = (input: BandMemberInput): Omit<BandMember, 'id'> => {
-  return {
-    name: input.name,
-    role: input.role,
-    bio: input.bio,
-    image_url: input.image_url,
-    social_links: input.social_links ? JSON.stringify(input.social_links) : null,
-    display_order: input.display_order
-  };
-};
+interface BandMemberResponse extends Omit<BandMember, 'social_links'> {
+  social_links?: SocialLinks | null;
+}
 
-// Transform partial input data for updates
-const transformPartialBandMember = (input: Partial<BandMemberInput>): Partial<BandMember> => {
-  const transformed: Partial<BandMember> = { ...input };
+// Transform functions
+const transformInputToMember = (input: BandMemberInput): Omit<BandMember, 'id'> => ({
+  name: input.name,
+  role: input.role,
+  bio: input.bio,
+  image_url: input.image_url,
+  display_order: input.display_order,
+  social_links: input.social_links ? JSON.stringify(input.social_links) : null
+});
+
+const transformPartialInput = (input: Partial<BandMemberInput>): Partial<BandMember> => {
+  const result: Partial<BandMember> = {};
   
+  if (input.name !== undefined) result.name = input.name;
+  if (input.role !== undefined) result.role = input.role;
+  if (input.bio !== undefined) result.bio = input.bio;
+  if (input.image_url !== undefined) result.image_url = input.image_url;
+  if (input.display_order !== undefined) result.display_order = input.display_order;
   if (input.social_links !== undefined) {
-    transformed.social_links = input.social_links ? JSON.stringify(input.social_links) : null;
+    result.social_links = input.social_links ? JSON.stringify(input.social_links) : null;
   }
 
-  // Remove the original social_links object to avoid type conflicts
-  delete (transformed as any).social_links;
-  
-  return transformed;
+  return result;
 };
+
+const transformToResponse = (member: BandMember): BandMemberResponse => ({
+  id: member.id,
+  name: member.name,
+  role: member.role,
+  bio: member.bio,
+  image_url: member.image_url,
+  display_order: member.display_order,
+  social_links: member.social_links ? JSON.parse(member.social_links) : null
+});
 
 // Get all band members
 router.get('/', async (_req: Request, res: Response) => {
   try {
     const members = await getBandMembers();
-    res.json(members.map(member => ({
-      ...member,
-      social_links: member.social_links ? JSON.parse(member.social_links) : null
-    })));
+    res.json(members.map(transformToResponse));
   } catch (error) {
     console.error('Error getting band members:', error);
     res.status(500).json({ error: 'Failed to get band members' });
@@ -66,10 +72,7 @@ router.get('/:id', async (req: Request, res: Response) => {
     if (!member) {
       return res.status(404).json({ error: 'Band member not found' });
     }
-    res.json({
-      ...member,
-      social_links: member.social_links ? JSON.parse(member.social_links) : null
-    });
+    res.json(transformToResponse(member));
   } catch (error) {
     console.error('Error getting band member:', error);
     res.status(500).json({ error: 'Failed to get band member' });
@@ -80,12 +83,9 @@ router.get('/:id', async (req: Request, res: Response) => {
 router.post('/', async (req: Request, res: Response) => {
   try {
     const input: BandMemberInput = req.body;
-    const transformedMember = transformBandMember(input);
+    const transformedMember = transformInputToMember(input);
     const newMember = await createBandMember(transformedMember);
-    res.status(201).json({
-      ...newMember,
-      social_links: newMember.social_links ? JSON.parse(newMember.social_links) : null
-    });
+    res.status(201).json(transformToResponse(newMember));
   } catch (error) {
     console.error('Error creating band member:', error);
     res.status(500).json({ error: 'Failed to create band member' });
@@ -96,17 +96,14 @@ router.post('/', async (req: Request, res: Response) => {
 router.put('/:id', async (req: Request, res: Response) => {
   try {
     const input: Partial<BandMemberInput> = req.body;
-    const transformedMember = transformPartialBandMember(input);
+    const transformedMember = transformPartialInput(input);
     const updatedMember = await updateBandMember(parseInt(req.params.id), transformedMember);
     
     if (!updatedMember) {
       return res.status(404).json({ error: 'Band member not found' });
     }
     
-    res.json({
-      ...updatedMember,
-      social_links: updatedMember.social_links ? JSON.parse(updatedMember.social_links) : null
-    });
+    res.json(transformToResponse(updatedMember));
   } catch (error) {
     console.error('Error updating band member:', error);
     res.status(500).json({ error: 'Failed to update band member' });

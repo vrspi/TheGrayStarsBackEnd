@@ -5,9 +5,9 @@ export interface BandMember {
   id?: number;
   name: string;
   role: string;
-  bio?: string;
-  image_url?: string;
-  social_links: string | null;  // Stored as JSON string in database
+  bio?: string | null;
+  image_url?: string | null;
+  social_links: string | null;  // JSON string in database
   display_order: number;
 }
 
@@ -36,7 +36,7 @@ export async function getBandMember(id: number): Promise<BandMember | null> {
   }
 }
 
-export async function createBandMember(member: BandMember): Promise<BandMember> {
+export async function createBandMember(member: Omit<BandMember, 'id'>): Promise<BandMember> {
   try {
     const [result] = await pool.query<ResultSetHeader>(
       'INSERT INTO band_members (name, role, bio, image_url, social_links, display_order) VALUES (?, ?, ?, ?, ?, ?)',
@@ -58,7 +58,13 @@ export async function updateBandMember(id: number, member: Partial<BandMember>):
     if (result.affectedRows === 0) {
       return null;
     }
-    return { ...member, id } as BandMember;
+    
+    // Fetch the updated record
+    const [rows] = await pool.query<RowDataPacket[]>(
+      'SELECT * FROM band_members WHERE id = ?',
+      [id]
+    );
+    return (rows[0] as BandMember) || null;
   } catch (error) {
     console.error('Error in updateBandMember:', error);
     throw new Error(`Failed to update band member with id ${id}`);
