@@ -1,5 +1,7 @@
-import express, { Request, Response, Router } from 'express';
-import { getBandMembers, getBandMember, createBandMember, updateBandMember, deleteBandMember } from '../services/band-members.service';
+import { Router, Request, Response } from 'express';
+import { BandMember, getBandMembers, getBandMember, createBandMember, updateBandMember, deleteBandMember } from '../services/band-members.service';
+
+const router = Router();
 
 interface SocialLinks {
   facebook?: string;
@@ -17,18 +19,27 @@ interface BandMemberInput {
   display_order: number;
 }
 
-const router: Router = express.Router();
-
 // Transform the input data to match the database schema
-const transformBandMember = (input: BandMemberInput) => {
+const transformBandMember = (input: BandMemberInput): Omit<BandMember, 'id'> => {
   return {
     ...input,
     social_links: input.social_links ? JSON.stringify(input.social_links) : null
   };
 };
 
+// Transform partial input data for updates
+const transformPartialBandMember = (input: Partial<BandMemberInput>): Partial<BandMember> => {
+  if (!input.social_links) {
+    return input;
+  }
+  return {
+    ...input,
+    social_links: JSON.stringify(input.social_links)
+  };
+};
+
 // Get all band members
-router.get('/', async (_req: Request, res: Response): Promise<void> => {
+router.get('/', async (_req: Request, res: Response) => {
   try {
     const members = await getBandMembers();
     res.json(members.map(member => ({
@@ -42,7 +53,7 @@ router.get('/', async (_req: Request, res: Response): Promise<void> => {
 });
 
 // Get a single band member
-router.get('/:id', async (req, res): Promise<void> => {
+router.get('/:id', async (req: Request, res: Response) => {
   try {
     const member = await getBandMember(parseInt(req.params.id));
     if (!member) {
@@ -59,7 +70,7 @@ router.get('/:id', async (req, res): Promise<void> => {
 });
 
 // Create a new band member
-router.post('/', async (req: Request<{}, {}, BandMemberInput>, res: Response): Promise<void> => {
+router.post('/', async (req: Request, res: Response) => {
   try {
     const input: BandMemberInput = req.body;
     const transformedMember = transformBandMember(input);
@@ -75,17 +86,16 @@ router.post('/', async (req: Request<{}, {}, BandMemberInput>, res: Response): P
 });
 
 // Update a band member
-router.put('/:id', async (req: Request<{ id: string }, {}, Partial<BandMemberInput>>, res: Response): Promise<void> => {
+router.put('/:id', async (req: Request, res: Response) => {
   try {
     const input: Partial<BandMemberInput> = req.body;
-    const transformedMember = input.social_links 
-      ? { ...input, social_links: JSON.stringify(input.social_links) }
-      : input;
-    
+    const transformedMember = transformPartialBandMember(input);
     const updatedMember = await updateBandMember(parseInt(req.params.id), transformedMember);
+    
     if (!updatedMember) {
       return res.status(404).json({ error: 'Band member not found' });
     }
+    
     res.json({
       ...updatedMember,
       social_links: updatedMember.social_links ? JSON.parse(updatedMember.social_links) : null
@@ -97,7 +107,7 @@ router.put('/:id', async (req: Request<{ id: string }, {}, Partial<BandMemberInp
 });
 
 // Delete a band member
-router.delete('/:id', async (req, res): Promise<void> => {
+router.delete('/:id', async (req: Request, res: Response) => {
   try {
     await deleteBandMember(parseInt(req.params.id));
     res.status(204).end();
