@@ -38,13 +38,16 @@ const runMiddleware = (req: VercelRequest, res: VercelResponse, fn: Function) =>
 interface Track {
   id?: number;
   title: string;
+  artist?: string;
   album?: string;
   release_date?: string;
   duration?: string;
-  track_url: string;
+  audio_url: string;
   cover_image_url?: string;
-  lyrics?: string;
   display_order?: number;
+  created_at?: string;
+  updated_at?: string;
+  lyrics?: string;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -95,8 +98,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       case 'POST':
         const newTrack: Track = req.body;
         const [result] = await pool.query(
-          'INSERT INTO music (title, album, release_date, duration, track_url, cover_image_url, lyrics, display_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-          [newTrack.title, newTrack.album, newTrack.release_date, newTrack.duration, newTrack.track_url, newTrack.cover_image_url, newTrack.lyrics, newTrack.display_order]
+          'INSERT INTO music (title, artist, album, release_date, duration, audio_url, cover_image_url, display_order, lyrics) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [newTrack.title, newTrack.artist, newTrack.album, newTrack.release_date, newTrack.duration, newTrack.audio_url, newTrack.cover_image_url, newTrack.display_order, newTrack.lyrics]
         );
         const insertId = (result as any).insertId;
         return res.status(201).json({ ...newTrack, id: insertId });
