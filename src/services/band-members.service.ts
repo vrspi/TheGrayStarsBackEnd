@@ -5,110 +5,77 @@ interface BandMember {
   id?: number;
   name: string;
   role: string;
-  bio: string;
-  image_url: string;
-  social_links: {
-    facebook?: string;
-    twitter?: string;
-    instagram?: string;
-    youtube?: string;
-  };
+  bio?: string;
+  image_url?: string;
+  social_links?: string;
   display_order: number;
 }
 
-interface BandMemberRow extends RowDataPacket, Omit<BandMember, 'social_links'> {
-  social_links: string;
-}
-
 export async function getBandMembers(): Promise<BandMember[]> {
-  const connection = await pool.getConnection();
   try {
-    const [rows] = await connection.query<BandMemberRow[]>(
+    const [rows] = await pool.query<RowDataPacket[]>(
       'SELECT * FROM band_members ORDER BY display_order'
     );
-    return rows.map(row => ({
-      ...row,
-      social_links: JSON.parse(row.social_links as string)
-    }));
-  } finally {
-    connection.release();
+    return rows as BandMember[];
+  } catch (error) {
+    console.error('Error in getBandMembers:', error);
+    throw new Error('Failed to fetch band members');
   }
 }
 
 export async function getBandMember(id: number): Promise<BandMember | null> {
-  const connection = await pool.getConnection();
   try {
-    const [rows] = await connection.query<BandMemberRow[]>(
+    const [rows] = await pool.query<RowDataPacket[]>(
       'SELECT * FROM band_members WHERE id = ?',
       [id]
     );
-    if (rows.length === 0) return null;
-    return {
-      ...rows[0],
-      social_links: JSON.parse(rows[0].social_links as string)
-    };
-  } finally {
-    connection.release();
+    return rows[0] as BandMember || null;
+  } catch (error) {
+    console.error('Error in getBandMember:', error);
+    throw new Error(`Failed to fetch band member with id ${id}`);
   }
 }
 
 export async function createBandMember(member: BandMember): Promise<BandMember> {
-  const connection = await pool.getConnection();
   try {
-    const [result] = await connection.query<ResultSetHeader>(
+    const [result] = await pool.query<ResultSetHeader>(
       'INSERT INTO band_members (name, role, bio, image_url, social_links, display_order) VALUES (?, ?, ?, ?, ?, ?)',
-      [
-        member.name,
-        member.role,
-        member.bio,
-        member.image_url,
-        JSON.stringify(member.social_links),
-        member.display_order
-      ]
+      [member.name, member.role, member.bio, member.image_url, member.social_links, member.display_order]
     );
-    return {
-      ...member,
-      id: result.insertId
-    };
-  } finally {
-    connection.release();
+    return { ...member, id: result.insertId };
+  } catch (error) {
+    console.error('Error in createBandMember:', error);
+    throw new Error('Failed to create band member');
   }
 }
 
-export async function updateBandMember(id: number, member: BandMember): Promise<BandMember | null> {
-  const connection = await pool.getConnection();
+export async function updateBandMember(id: number, member: Partial<BandMember>): Promise<BandMember | null> {
   try {
-    const [result] = await connection.query<ResultSetHeader>(
-      'UPDATE band_members SET name = ?, role = ?, bio = ?, image_url = ?, social_links = ?, display_order = ? WHERE id = ?',
-      [
-        member.name,
-        member.role,
-        member.bio,
-        member.image_url,
-        JSON.stringify(member.social_links),
-        member.display_order,
-        id
-      ]
+    const [result] = await pool.query<ResultSetHeader>(
+      'UPDATE band_members SET ? WHERE id = ?',
+      [member, id]
     );
-    if (result.affectedRows === 0) return null;
-    return {
-      ...member,
-      id
-    };
-  } finally {
-    connection.release();
+    if (result.affectedRows === 0) {
+      return null;
+    }
+    return { ...member, id } as BandMember;
+  } catch (error) {
+    console.error('Error in updateBandMember:', error);
+    throw new Error(`Failed to update band member with id ${id}`);
   }
 }
 
-export async function deleteBandMember(id: number): Promise<boolean> {
-  const connection = await pool.getConnection();
+export async function deleteBandMember(id: number): Promise<void> {
   try {
-    const [result] = await connection.query<ResultSetHeader>(
+    const [result] = await pool.query<ResultSetHeader>(
       'DELETE FROM band_members WHERE id = ?',
       [id]
     );
-    return result.affectedRows > 0;
-  } finally {
-    connection.release();
+    if (result.affectedRows === 0) {
+      throw new Error('Band member not found');
+    }
+  } catch (error) {
+    console.error('Error in deleteBandMember:', error);
+    throw new Error(`Failed to delete band member with id ${id}`);
   }
-} 
+}

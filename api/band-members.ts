@@ -1,6 +1,21 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { getBandMembers, getBandMember, createBandMember, updateBandMember, deleteBandMember } from '../src/services/band-members.service';
 import cors from 'cors';
+import mysql from 'mysql2/promise';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+// Database connection configuration
+const pool = mysql.createPool({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
 
 // CORS middleware
 const corsMiddleware = cors({
@@ -22,24 +37,45 @@ const runMiddleware = (req: VercelRequest, res: VercelResponse, fn: Function) =>
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  console.log('API Handler started');
+  console.log('Environment variables:', {
+    DB_HOST: process.env.DB_HOST ? 'Set' : 'Not set',
+    DB_USER: process.env.DB_USER ? 'Set' : 'Not set',
+    DB_PASSWORD: process.env.DB_PASSWORD ? 'Set' : 'Not set',
+    DB_NAME: process.env.DB_NAME ? 'Set' : 'Not set'
+  });
+
   // Run the CORS middleware
-  await runMiddleware(req, res, corsMiddleware);
+  try {
+    await runMiddleware(req, res, corsMiddleware);
+  } catch (error) {
+    console.error('CORS middleware error:', error);
+    return res.status(500).json({ error: 'CORS configuration error' });
+  }
 
   try {
+    // Test database connection
+    const connection = await pool.getConnection();
+    console.log('Database connection successful');
+    connection.release();
+
     switch (req.method) {
       case 'GET':
         if (req.query.id) {
+          console.log('Getting band member by ID:', req.query.id);
           const member = await getBandMember(parseInt(req.query.id as string));
           if (!member) {
             return res.status(404).json({ error: 'Band member not found' });
           }
           return res.json(member);
         } else {
+          console.log('Getting all band members');
           const members = await getBandMembers();
           return res.json(members);
         }
 
       case 'POST':
+        console.log('Creating new band member:', req.body);
         const newMember = await createBandMember(req.body);
         return res.status(201).json(newMember);
 
@@ -47,6 +83,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (!req.query.id) {
           return res.status(400).json({ error: 'ID is required' });
         }
+        console.log('Updating band member:', req.query.id);
         const updatedMember = await updateBandMember(parseInt(req.query.id as string), req.body);
         if (!updatedMember) {
           return res.status(404).json({ error: 'Band member not found' });
@@ -57,6 +94,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (!req.query.id) {
           return res.status(400).json({ error: 'ID is required' });
         }
+        console.log('Deleting band member:', req.query.id);
         await deleteBandMember(parseInt(req.query.id as string));
         return res.status(204).end();
 
@@ -66,6 +104,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   } catch (error) {
     console.error('Error handling request:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ 
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 }
