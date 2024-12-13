@@ -1,13 +1,13 @@
 import pool from '../config/database';
 import { RowDataPacket, ResultSetHeader } from 'mysql2/promise';
 
-interface BandMember {
+export interface BandMember {
   id?: number;
   name: string;
   role: string;
   bio?: string;
   image_url?: string;
-  social_links?: string;
+  social_links: string | null;  // Stored as JSON string in database
   display_order: number;
 }
 
@@ -29,7 +29,7 @@ export async function getBandMember(id: number): Promise<BandMember | null> {
       'SELECT * FROM band_members WHERE id = ?',
       [id]
     );
-    return rows[0] as BandMember || null;
+    return (rows[0] as BandMember) || null;
   } catch (error) {
     console.error('Error in getBandMember:', error);
     throw new Error(`Failed to fetch band member with id ${id}`);
