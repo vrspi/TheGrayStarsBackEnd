@@ -2,18 +2,42 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/**/*.ts",
+      "src": "pages/api/**/*.ts",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/api/band-members",
-      "dest": "/api/band-members.ts"
+      "dest": "/pages/api/band-members.ts"
     },
     {
       "src": "/api/band-members/(.*)",
-      "dest": "/api/band-members.ts"
+      "dest": "/pages/api/band-members.ts"
+    },
+    {
+      "src": "/api/music",
+      "dest": "/pages/api/music.ts"
+    },
+    {
+      "src": "/api/music/(.*)",
+      "dest": "/pages/api/music.ts"
+    },
+    {
+      "src": "/api/gallery",
+      "dest": "/pages/api/gallery.ts"
+    },
+    {
+      "src": "/api/gallery/(.*)",
+      "dest": "/pages/api/gallery.ts"
+    },
+    {
+      "src": "/api/homepage",
+      "dest": "/pages/api/homepage.ts"
+    },
+    {
+      "src": "/api/homepage/(.*)",
+      "dest": "/pages/api/homepage.ts"
     }
   ]
 }
