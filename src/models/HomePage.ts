@@ -1,25 +1,48 @@
-import mongoose from 'mongoose';
+import { Schema, model, Document } from 'mongoose';
 
-const heroSectionSchema = new mongoose.Schema({
+interface IHeroSection {
+  title: string;
+  subtitle?: string;
+  backgroundImage?: string;
+}
+
+interface IFeaturedProduct {
+  id: Schema.Types.ObjectId;
+}
+
+interface IAboutSection {
+  title: string;
+  content?: string;
+  image?: string;
+}
+
+export interface IHomePage extends Document {
+  heroSection: IHeroSection;
+  featuredProducts: IFeaturedProduct[];
+  aboutSection: IAboutSection;
+  lastUpdated: Date;
+}
+
+const heroSectionSchema = new Schema<IHeroSection>({
   title: String,
   subtitle: String,
   backgroundImage: String
 });
 
-const featuredProductSchema = new mongoose.Schema({
+const featuredProductSchema = new Schema<IFeaturedProduct>({
   id: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: 'Product'
   }
 });
 
-const aboutSectionSchema = new mongoose.Schema({
+const aboutSectionSchema = new Schema<IAboutSection>({
   title: String,
   content: String,
   image: String
 });
 
-const homePageSchema = new mongoose.Schema({
+const homePageSchema = new Schema<IHomePage>({
   heroSection: heroSectionSchema,
   featuredProducts: [featuredProductSchema],
   aboutSection: aboutSectionSchema,
@@ -29,4 +52,4 @@ const homePageSchema = new mongoose.Schema({
   }
 });
 
-export const HomePage = mongoose.model('HomePage', homePageSchema);
+export const HomePage = model<IHomePage>('HomePage', homePageSchema);
