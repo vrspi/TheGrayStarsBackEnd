@@ -86,7 +86,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const queryParams = req.query.album ? [req.query.album] : [];
           
           const [rows] = await pool.query(
-            `SELECT * FROM music ${albumFilter} ORDER BY display_order ASC, release_date DESC`,
+            `SELECT * FROM music ${albumFilter} ORDER BY COALESCE(display_order, 9999), release_date DESC`,
             queryParams
           );
           return res.json(Array.isArray(rows) ? rows : []);
