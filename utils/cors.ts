@@ -1,8 +1,21 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 
+const allowedOrigins = [
+  'https://the-gray-stars-front-end-74kd.vercel.app',
+  'https://the-gray-stars-front-end-74kd-cz22ezzwt-vrspis-projects.vercel.app',
+  'http://localhost:3000'
+];
+
 export async function corsMiddleware(req: VercelRequest, res: VercelResponse) {
-  // Allow requests from your frontend domain
-  res.setHeader('Access-Control-Allow-Origin', 'https://the-gray-stars-front-end-74kd.vercel.app');
+  const origin = req.headers.origin;
+  
+  // Check if the origin is allowed
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else {
+    // For development/testing, you might want to allow all origins
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
   
   // Allow specific methods
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
